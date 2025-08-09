@@ -1,0 +1,108 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317  # mapped to 55690 externally
+      http:
+        endpoint: 0.0.0.0:4318  # mapped to 55691 externally
+  filelog/satarko:
+    include: ["/app/logs/satarko/*.log"]
+    start_at: beginning
+    include_file_path: true
+    include_file_name: true
+    operators:
+      # Parse the log body as JSON
+      - type: json_parser
+        id: parse_json
+        parse_from: body
+        timestamp:
+          parse_from: attributes.timestamp
+          layout_type: strptime
+          layout: '%Y-%m-%d %H:%M:%S,%f'
+          location: Asia/Dhaka
+      # Move parsed JSON fields to attributes (correct syntax)
+      - type: move
+        from: attributes.level
+        to: attributes.log_level
+      - type: move
+        from: attributes.filename
+        to: attributes.source_file
+      - type: move
+        from: attributes.module
+        to: attributes.module_name
+      - type: move
+        from: attributes.function
+        to: attributes.function_name
+      - type: move
+        from: attributes.line
+        to: attributes.line_number
+      - type: move
+        from: attributes.message
+        to: body
+      # Add service identification
+      - type: add
+        field: attributes.log_source
+        value: satarko-app
+      - type: add
+        field: resource.service.name
+        value: satarko-logs
+  hostmetrics: 
+    collection_interval: 60s  # Frequency of metrics collection.
+    scrapers:
+      cpu: {}
+      load: {}
+      memory: {}
+      disk: {}
+      filesystem: {}
+      network: {}
+
+processors:
+  resource/add_service_name:
+    attributes:
+      - key: service.name
+        value: satarko-logs
+        action: upsert
+      - key: job
+        value: satarko-logs
+        action: upsert
+  resourcedetection:
+    detectors: [env, system]
+    system:
+      hostname_sources: [os]
+  resource/env:
+    attributes:
+    - key: deployment.environment
+      value: staging
+      action: upsert
+  batch:
+    send_batch_size: 100
+    send_batch_max_size: 200
+    timeout: 5s
+
+exporters:
+  otlp:
+    endpoint: tempo:4317  # under same network that why using container name
+    tls:
+      insecure: true
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    send_timestamps: true
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp]
+
+    metrics/prometheus:
+      receivers: [otlp, hostmetrics]
+      processors: [resourcedetection, resource/env]
+      exporters: [prometheus]
+
+    logs:
+      receivers: [filelog/satarko]
+      processors: [resource/add_service_name, batch]
+      exporters: [loki]

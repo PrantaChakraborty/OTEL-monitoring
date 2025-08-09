@@ -1,0 +1,62 @@
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - tempo
+    networks:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    ports:
+      - "3200:3200"   # Tempo API
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "9095:9095"   # gRPC for Tempo
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo.yaml
+      - ./tempo-data:/tmp/tempo
+    networks:
+      - monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - monitoring
+  loki:
+    image: grafana/loki:main-d585847
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/loki-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    networks:
+      - monitoring
+
+volumes:
+  grafana-storage:
+  tempo-data:
+  prometheus-data:
+  loki-data:
+networks:
+  monitoring:
+    name: monitoring
+    driver: bridge

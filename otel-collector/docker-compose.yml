@@ -1,0 +1,22 @@
+services:
+  otel-collector-custom:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector-custom
+    ports:
+      - "55690:4317"
+      - "55691:4318"
+    volumes:
+      - ./otel_config.yaml:/config/config.yaml
+      - /home/pranta/Documents/zicore/zicore-connect/logs:/app/logs/satarko
+      - /var/log/nginx:/app/logs/nginx
+    command:
+      - "--config=/config/config.yaml"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+
+networks:
+  monitoring:
+    external: true  # This tells Docker to use the existing network
+    name: monitoring

@@ -1,0 +1,7 @@
+
+# Ignore Loki data directory
+loki/data/
+
+prometheus_data/
+
+tempo-data/
