@@ -73,47 +73,13 @@ flowchart LR
    - Trace analysis from Tempo
    - Log exploration from Loki
 
-## Components
-
-### 1. Data Collectors
-- **System Metrics Collector**
-  - Collects CPU, Memory, Disk usage
-  - Start: `systemctl start metrics-collector`
-  - Config: `/etc/metrics/collector.conf`
-
-- **Application Logs Collector**
-  - Collects application-specific logs
-  - Start: `systemctl start log-collector`
-  - Config: `/etc/logs/collector.conf`
-
-### 2. Processing Engine
-- Handles data aggregation and processing
-- Start: `systemctl start process-engine`
-- Config: `/etc/process-engine/config.yaml`
-
-### 3. Time Series Database
-- Stores all metrics and logs
-- Default port: 8086
-- Start: `systemctl start tsdb`
-- Web UI: `http://localhost:8086`
-
-### 4. Visualization Dashboard
-- Real-time metrics visualization
-- Access: `http://localhost:3000`
-- Default credentials:
-  - Username: admin
-  - Password: admin
-
-### 5. Alert Manager
-- Handles alert rules and notifications
-- Config: `/etc/alertmanager/rules.yaml`
-- Web UI: `http://localhost:9093`
 
 ## Quick Start
 
 1. Clone the repository:
+Required *Docker* and *just*
 ```bash
-git clone https://github.com/your-org/monitoring
+git clone https://github.com/PrantaChakraborty/OTEL-monitoring.git
 ```
 
 2. Start all services:
@@ -121,34 +87,74 @@ git clone https://github.com/your-org/monitoring
 just start-all
 ```
 
+
 3. Access the dashboard:
 - Open `http://localhost:3000`
-- Login with default credentials
+- Login with default credentials 
+- Username: admin
+- Password: admin
 
 4. Stop all services:
 ```bash
 just stop-all
 ```
 
-## Configuration
-
-Detailed configuration files are located in `/etc/monitoring/`:
-- `collectors.yaml`: Data collection settings
-- `processing.yaml`: Data processing rules
-- `alerts.yaml`: Alert definitions
-- `visualization.yaml`: Dashboard configurations
-
-## Troubleshooting
-
-Check service status:
+## Backend Configuration
+Your backend(Django) needs to send data to the otel collector
+otel url is : http://localhost:55690
 ```bash
-systemctl status monitoring-stack
+    OTEL_RESOURCE_ATTRIBUTES=service.name=satarko \
+    OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:55690" \
+    OTEL_EXPORTER_OTLP_PROTOCOL=grpc \
+    opentelemetry-instrument gunicorn zicore_connect.wsgi:application --workers 2
 ```
 
-View logs:
-```bash
-journalctl -u monitoring-stack
+## Project Structure
+
+monitoring/
+├── docker-compose.yml
+├── dashboard/
+│   └── loki.json
+├── loki/
+│   ├── loki-config.yaml
+├── prometheus/
+│   └── prometheus.yml
+├── tempo/
+│   └── tempo.yml
+otel-collector/
+├── docker-compose.yml
+└── otel_config.yaml
 ```
 
-## Support
-For issues and support, please create an issue in the repository.
+```
+# Project Structure Documentation
+
+## monitoring/
+Main monitoring stack directory containing configuration files for observability tools.
+
+### monitoring/docker-compose.yml
+Docker Compose configuration for setting up the monitoring stack services.
+
+### monitoring/dashboard/loki.json 
+Grafana dashboard configuration file for Loki logs visualization.
+
+### monitoring/loki/loki-config.yaml
+Configuration file for Loki log aggregation system.
+
+### monitoring/prometheus/prometheus.yml
+Prometheus configuration file defining scrape targets and metrics collection.
+
+### monitoring/tempo/tempo.yml
+Configuration file for Tempo distributed tracing backend.
+
+## otel-collector/
+OpenTelemetry Collector configuration directory.
+
+### otel-collector/docker-compose.yml
+Docker Compose file for OpenTelemetry Collector deployment.
+
+### otel-collector/otel_config.yaml
+OpenTelemetry Collector configuration defining data collection and export pipelines.
+
+
+
