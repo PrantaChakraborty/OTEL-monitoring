@@ -111,6 +111,7 @@ otel url is : http://localhost:55690
 
 ## Project Structure
 
+```
 monitoring/
 ├── docker-compose.yml
 ├── dashboard/
@@ -126,7 +127,6 @@ otel-collector/
 └── otel_config.yaml
 ```
 
-```
 # Project Structure Documentation
 
 ## monitoring/
